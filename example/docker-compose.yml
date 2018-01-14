@@ -1,0 +1,59 @@
+version: "3.3"
+services:
+  db:
+    image: postgres:9.6.5-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: pdns
+      POSTGRES_USER: pdns
+      POSTGRES_PASSWORD: qwerty
+    ports:
+      - "5432:5432"
+    volumes:
+      - type: bind
+        source: ./pgsql-entry
+        target: /docker-entrypoint-initdb.d
+    networks:
+      # you may set custom IP addresses
+      n1:
+        ipv4_address: 172.16.238.10
+      n2:
+        ipv4_address: 172.16.239.11
+  pdns:
+    build:
+      context: ../
+      dockerfile: ./Dockerfile
+    links:
+      - db:postgres
+    ports:
+      - "8081:8081"
+      - "53:53"
+      - "53:53/udp"
+    depends_on:
+      - db
+    volumes:
+      - type: bind
+        # Use ./pdns/pdns-debug.conf for verbose information
+        source: ./pdns.conf
+        target: /etc/pdns/pdns.conf
+    networks:
+      # you may set custom IP addresses
+      n1:
+        ipv4_address: 172.16.238.150
+
+networks:
+  n1:
+    # use the bridge driver, but enable IPv6
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24
+  n2:
+    # use the bridge driver, but enable IPv6
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.239.0/24
+
